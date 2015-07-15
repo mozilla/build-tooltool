@@ -46,6 +46,8 @@ __version__ = '1'
 DEFAULT_MANIFEST_NAME = 'manifest.tt'
 TOOLTOOL_PACKAGE_SUFFIX = '.TOOLTOOL-PACKAGE'
 
+TTL_MAX_VALUE = 365
+
 
 log = logging.getLogger(__name__)
 
@@ -80,7 +82,7 @@ class MissingFileException(ExceptionWithFilename):
 class FileRecord(object):
 
     def __init__(self, filename, size, digest, algorithm, unpack=False,
-                 visibility=None, setup=None):
+                 visibility=None, setup=None, ttl=None):
         object.__init__(self)
         if '/' in filename or '\\' in filename:
             log.error(
@@ -93,6 +95,7 @@ class FileRecord(object):
         self.unpack = unpack
         self.visibility = visibility
         self.setup = setup
+        self.ttl = ttl
 
     def __eq__(self, other):
         if self is other:
@@ -101,7 +104,8 @@ class FileRecord(object):
            self.size == other.size and \
            self.digest == other.digest and \
            self.algorithm == other.algorithm and \
-           self.visibility == other.visibility:
+           self.visibility == other.visibility and \
+           self.ttl == other.ttl:
             return True
         else:
             return False
@@ -113,9 +117,10 @@ class FileRecord(object):
         return repr(self)
 
     def __repr__(self):
-        return "%s.%s(filename='%s', size=%s, digest='%s', algorithm='%s', visibility=%r)" % (
-            __name__, self.__class__.__name__, self.filename, self.size,
-            self.digest, self.algorithm, self.visibility)
+        return ("%s.%s(filename='%s', size=%s, digest='%s', algorithm='%s',"
+                "visibility=%r, ttl=%r)") % (
+                        __name__, self.__class__.__name__, self.filename, self.size,
+                        self.digest, self.algorithm, self.visibility, self.ttl)
 
     def present(self):
         # Doesn't check validity
@@ -183,6 +188,8 @@ class FileRecordJSONEncoder(json.JSONEncoder):
                 rv['visibility'] = obj.visibility
             if obj.setup:
                 rv['setup'] = obj.setup
+            if obj.ttl is not None:
+                rv['ttl'] = obj.ttl
             return rv
 
     def default(self, f):
@@ -228,9 +235,10 @@ class FileRecordJSONDecoder(json.JSONDecoder):
                 unpack = obj.get('unpack', False)
                 visibility = obj.get('visibility', None)
                 setup = obj.get('setup')
+                ttl = obj.get('ttl', None)
                 rv = FileRecord(
                     obj['filename'], obj['size'], obj['digest'], obj['algorithm'],
-                    unpack, visibility, setup)
+                    unpack, visibility, setup, ttl)
                 log.debug("materialized %s" % rv)
                 return rv
         return obj
@@ -397,7 +405,7 @@ def validate_manifest(manifest_file):
         return False
 
 
-def add_files(manifest_file, algorithm, filenames, visibility):
+def add_files(manifest_file, algorithm, filenames, visibility, ttl):
     # returns True if all files successfully added, False if not
     # and doesn't catch library Exceptions.  If any files are already
     # tracked in the manifest, return will be False because they weren't
@@ -415,6 +423,7 @@ def add_files(manifest_file, algorithm, filenames, visibility):
         path, name = os.path.split(filename)
         new_fr = create_file_record(filename, algorithm)
         new_fr.visibility = visibility
+        new_fr.ttl = ttl
         log.debug("appending a new file record to manifest file")
         add = True
         for fr in old_manifest.file_records:
@@ -842,6 +851,7 @@ def upload(manifest, message, base_urls, auth_file, region):
             'digest': fr.digest,
             'algorithm': fr.algorithm,
             'visibility': fr.visibility,
+            'ttl': fr.ttl
         }
 
     # make the upload request
@@ -906,7 +916,7 @@ def process_command(options, args):
         return validate_manifest(options['manifest'])
     elif cmd == 'add':
         return add_files(options['manifest'], options['algorithm'], cmd_args,
-                         options['visibility'])
+                         options['visibility'], options['ttl'])
     elif cmd == 'purge':
         if options['cache_folder']:
             purge(folder=options['cache_folder'], gigs=options['size'])
@@ -955,6 +965,11 @@ def main(argv, _skip_logging=False):
                            'files that cannot be distributed out of the company '
                            'but not for secrets; "public" files are available to '
                            'anyone withou trestriction')
+    parser.add_option('--ttl', default=None,
+                      type='int', dest='ttl', action='store',
+                      help='Time to live for the file to uploaded, in days; the '
+                           'files will be removed from storage, but the metadata '
+                           'will be retained')
     parser.add_option('-o', '--overwrite', default=False,
                       dest='overwrite', action='store_true',
                       help='UNUSED; present for backward compatibility')
@@ -1006,6 +1021,9 @@ def main(argv, _skip_logging=False):
 
     if options['algorithm'] != 'sha512':
         parser.error('only --algorithm sha512 is supported')
+
+    if options['ttl'] is not None and not 0 < options['ttl'] <= TTL_MAX_VALUE:
+        parser.error('ttl values must be between 1 and %r days, inclusive' % TTL_MAX_VALUE)
 
     if len(args) < 1:
         parser.error('You must specify a command')
