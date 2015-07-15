@@ -482,6 +482,10 @@ def test_main_bad_algorithm():
     eq_(call_main('tooltool', '--algorithm', 'sha13', 'fetch'), 'exit 2')
 
 
+def test_main_bad_ttl():
+    eq_(call_main('tooltool', '--ttl', '0'), 'exit 2')
+
+
 def test_command_list():
     with mock.patch('tooltool.list_manifest') as list_manifest:
         eq_(call_main('tooltool', 'list', '--manifest', 'foo.tt'), 0)
@@ -510,6 +514,12 @@ def test_command_add_visibility_public():
     with mock.patch('tooltool.add_files') as add_files:
         eq_(call_main('tooltool', 'add', '--visibility', 'public', 'a', 'b'), 0)
         add_files.assert_called_with('manifest.tt', 'sha512', ['a', 'b'], 'public', None)
+
+
+def test_command_add_ttl():
+    with mock.patch('tooltool.add_files') as add_files:
+        eq_(call_main('tooltool', 'add', '--ttl', '2', 'a', 'b'), 0)
+        add_files.assert_called_with('manifest.tt', 'sha512', ['a', 'b'], None, 2)
 
 
 def test_command_purge_no_folder():
@@ -1482,6 +1492,15 @@ class AddFiles(BaseManifestTest):
         file_json['visibility'] = 'public'
         assert tooltool.add_files('manifest.tt', 'sha512', [file_json['filename']], 'public', None)
         self.assert_manifest([self.test_record_json, file_json])
+
+    def test_append_ttl(self):
+        """Adding a new file to an existing manifest results in a manifest with
+        two files, with the ttl set on the new one"""
+        file_json = self.make_file()
+        file_json['ttl'] = 2
+        assert tooltool.add_files('manifest.tt', 'sha512', [file_json['filename']], None, 2)
+        self.assert_manifest([self.test_record_json, file_json])
+
 
     def test_new_manifest(self):
         """Adding a new file to a new manifest results in a manifest with one
