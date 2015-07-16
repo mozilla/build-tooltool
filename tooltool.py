@@ -46,8 +46,6 @@ __version__ = '1'
 DEFAULT_MANIFEST_NAME = 'manifest.tt'
 TOOLTOOL_PACKAGE_SUFFIX = '.TOOLTOOL-PACKAGE'
 
-TTL_MAX_VALUE = 365
-
 
 log = logging.getLogger(__name__)
 
@@ -964,12 +962,14 @@ def main(argv, _skip_logging=False):
                       help='Visibility level of this file; "internal" is for '
                            'files that cannot be distributed out of the company '
                            'but not for secrets; "public" files are available to '
-                           'anyone withou trestriction')
+                           'anyone without restriction')
     parser.add_option('--ttl', default=None,
                       type='int', dest='ttl', action='store',
                       help='Time to live for the file to uploaded, in days; the '
                            'files will be removed from storage, but the metadata '
-                           'will be retained')
+                           'will be retained. Reuploading a file with a later TTL '
+                           'expiration date will override previous values. A value '
+                           'of 0, or otherwise blank, will let the file live forever.')
     parser.add_option('-o', '--overwrite', default=False,
                       dest='overwrite', action='store_true',
                       help='UNUSED; present for backward compatibility')
@@ -1022,8 +1022,8 @@ def main(argv, _skip_logging=False):
     if options['algorithm'] != 'sha512':
         parser.error('only --algorithm sha512 is supported')
 
-    if options['ttl'] is not None and not 0 < options['ttl'] <= TTL_MAX_VALUE:
-        parser.error('ttl values must be between 1 and %r days, inclusive' % TTL_MAX_VALUE)
+    if options['ttl'] is not None and options['ttl'] < 0:
+        parser.error('ttl values must be non-negative')
 
     if len(args) < 1:
         parser.error('You must specify a command')
