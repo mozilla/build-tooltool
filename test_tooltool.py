@@ -483,7 +483,7 @@ def test_main_bad_algorithm():
 
 
 def test_main_bad_ttl():
-    eq_(call_main('tooltool', '--ttl', '0'), 'exit 2')
+    eq_(call_main('tooltool', '--ttl', '-3'), 'exit 2')
 
 
 def test_command_list():
