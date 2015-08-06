@@ -969,7 +969,7 @@ def main(argv, _skip_logging=False):
                            'files will be removed from storage, but the metadata '
                            'will be retained. Reuploading a file with a later TTL '
                            'expiration date will override previous values. A value '
-                           'of 0, or otherwise blank, will let the file live forever.')
+                           'of 0, or if the option is omitted, will let the file live forever.')
     parser.add_option('-o', '--overwrite', default=False,
                       dest='overwrite', action='store_true',
                       help='UNUSED; present for backward compatibility')
@@ -1024,6 +1024,10 @@ def main(argv, _skip_logging=False):
 
     if options['ttl'] is not None and options['ttl'] < 0:
         parser.error('ttl values must be non-negative')
+
+    # translate days into seconds
+    if options['ttl']:
+        options['ttl'] *= 86400
 
     if len(args) < 1:
         parser.error('You must specify a command')

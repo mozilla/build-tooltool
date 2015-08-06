@@ -519,7 +519,7 @@ def test_command_add_visibility_public():
 def test_command_add_ttl():
     with mock.patch('tooltool.add_files') as add_files:
         eq_(call_main('tooltool', 'add', '--ttl', '2', 'a', 'b'), 0)
-        add_files.assert_called_with('manifest.tt', 'sha512', ['a', 'b'], None, 2)
+        add_files.assert_called_with('manifest.tt', 'sha512', ['a', 'b'], None, 2*86400)
 
 
 def test_command_purge_no_folder():
