@@ -75,8 +75,18 @@ trap "kill %1; wait" EXIT SIGINT SIGQUIT SIGTERM
 # set up the serverdir
 
 mkdir serverdir/sha512
+if test $(which sha512sum); then
+  SHA512SUM=sha512sum
+else if test $(which shasum); then
+  SHA512SUM="shasum -a 512"
+else
+  echo "ERROR: Couldn't find sha512sum."
+  exit 1
+fi
+fi
+echo "using '$SHA512SUM' for hash verification"
 for content in 1 2; do
-    sha512=$(echo $content | sha512sum | sed -e 's/ .*//')
+    sha512=$(echo $content | $SHA512SUM | sed -e 's/ .*//')
     echo $content > serverdir/sha512/$sha512
 done
 
