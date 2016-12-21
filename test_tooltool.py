@@ -200,7 +200,7 @@ class TestFileRecord(BaseFileRecordTest):
         self.assertNotEqual(self.test_record, test_record2)
 
     def test_inequality(self):
-        for i in ['filename', 'size', 'algorithm', 'digest']:
+        for i in ['filename', 'size', 'algorithm', 'digest', 'version']:
             test_record2 = copy.deepcopy(self.test_record)
             test_record2.__dict__[i] = 'wrong!'
             self.assertNotEqual(self.test_record, test_record2)
@@ -316,6 +316,15 @@ class TestFileRecordJSONCodecs(BaseFileRecordListTest):
         from_json = json.loads(json_string,
                                cls=tooltool.FileRecordJSONDecoder)
         for i in ['filename', 'size', 'algorithm', 'digest', 'unpack', 'setup']:
+            self.assertEqual(getattr(from_json, i), getattr(self.test_record, i), i)
+
+    def test_json_dumps_with_version(self):
+        self.test_record.version = 'test 3.2.1 contact'
+        json_string = json.dumps(
+            self.test_record, cls=tooltool.FileRecordJSONEncoder)
+        from_json = json.loads(json_string,
+                               cls=tooltool.FileRecordJSONDecoder)
+        for i in ['filename', 'size', 'algorithm', 'digest', 'version']:
             self.assertEqual(getattr(from_json, i), getattr(self.test_record, i), i)
 
     def test_decode_list(self):
@@ -505,6 +514,13 @@ def test_command_add_unpack():
         eq_(call_main('tooltool', 'add', '--unpack', 'a', 'b'), 0)
         add_files.assert_called_with('manifest.tt', 'sha512', ['a', 'b'],
             None, None, True)
+
+def test_command_add_version():
+    with mock.patch('tooltool.add_files') as add_files:
+        version = 'foo 1.7.12-beta.2+test'
+        eq_(call_main('tooltool', 'add', '--version', version, 'foo.tar.gz'), 0)
+        add_files.assert_called_with('manifest.tt', 'sha512', ['foo.tar.gz'],
+                version, None, False)
 
 def test_command_add_visibility_internal():
     with mock.patch('tooltool.add_files') as add_files:
