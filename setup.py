@@ -12,7 +12,7 @@ data_patterns = [
 ]
 
 setup(name='tooltool',
-      version='1.0.0',
+      version='1.3.0',
       description='Secure, cache-friendly access to large binary blobs for builds and tests',
       author='John Ford',
       author_email='jhford@mozilla.com',
