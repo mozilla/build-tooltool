@@ -570,7 +570,7 @@ def test_command_fetch_no_url():
     with mock.patch('tooltool.fetch_files') as fetch_files:
         eq_(call_main('tooltool', 'fetch'), 0)
         fetch_files.assert_called_with('manifest.tt',
-                                       ['https://api.pub.build.mozilla.org/tooltool/'],
+                                       ['https://tooltool.mozilla-releng.net/'],
                                        [], cache_folder=None, auth_file=None,
                                        region=None)
 
@@ -642,7 +642,7 @@ def test_command_upload_no_url():
     with mock.patch('tooltool.upload') as upload:
         eq_(call_main('tooltool', 'upload', '--message', 'msg'), 0)
         upload.assert_called_with('manifest.tt', 'msg',
-                                  ['https://api.pub.build.mozilla.org/tooltool/'],
+                                  ['https://tooltool.mozilla-releng.net/'],
                                   None, None)
 
 
